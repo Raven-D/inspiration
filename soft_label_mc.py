@@ -39,3 +39,31 @@ print(s.run(tf.nn.softmax(a, -1)))
 
 new_labels = softlabel_mc(a, [2, 0, 0], cls_num=3, rate=1.5)
 print(s.run(ce_loss(a, new_labels)))
+
+# solution 2
+
+def softlabel_ce(labels, logits, cls_num, rate=1.0, dtype=tf.float32):
+    fcls_num = float(cls_num)
+    if (rate <= 1.0):
+        limit = (1.0 / fcls_num) + (1.0 / fcls_num) * -np.log(1./fcls_num)
+    else:
+        limit = (1.0 / fcls_num) * rate
+    logits = tf.convert_to_tensor(logits, dtype=dtype)
+    stm = tf.nn.softmax(logits, axis=-1)
+    ohot = tf.one_hot(labels, cls_num)
+    filt = tf.convert_to_tensor(ohot * limit, dtype=dtype)
+    print('filt')
+    print(s.run(filt))
+    minus = filt - stm * ohot
+    print('minus')
+    print(s.run(minus))
+    sum_minus = tf.reduce_sum(minus, axis=-1)
+    print('resd')
+    print(s.run(sum_minus))
+    loss_mask = tf.where(sum_minus > 0.0, tf.ones_like(sum_minus), tf.zeros_like(sum_minus))
+    print('loss_mask')
+    print(s.run(loss_mask))
+    return -tf.reduce_sum(ohot * tf.log(stm), -1) * loss_mask
+    # return loss_mask
+
+print(s.run(softlabel_ce([2, 0, 0], a, 3, rate=1.5)))
